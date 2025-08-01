@@ -1,20 +1,29 @@
 "use client";
-import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { ably } from '../../../utils/ably';
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { ably } from "../../../utils/ably";
 
 export default function QuizPage() {
   const searchParams = useSearchParams();
-  const roomId = searchParams.get('roomId');
+  const roomId = searchParams.get("roomId");
   const [question, setQuestion] = useState(null);
   const [selected, setSelected] = useState(null);
-  const username = typeof window !== 'undefined' ? localStorage.getItem('username') : '';
+  const username =
+    typeof window !== "undefined" ? localStorage.getItem("username") : "";
 
   useEffect(() => {
     if (!roomId) return;
-    const channel = ably.channels.get(roomId);
 
-    channel.subscribe('new-question', msg => {
+    const channel = ably.channels.get(roomId);
+    console.log("channel",channel)
+     ably.connection.once("connected", () => {
+        console.log("Connected to Ably!")
+      })
+
+
+    channel.publish("join-request", { username });
+
+    channel.subscribe("new-question", (msg) => {
       setQuestion(msg.data);
       setSelected(null);
     });
@@ -24,7 +33,7 @@ export default function QuizPage() {
 
   const submitAnswer = () => {
     if (!question || selected === null) return;
-    ably.channels.get(roomId).publish('answer-submitted', {
+    ably.channels.get(roomId).publish("answer-submitted", {
       username,
       answer: question.options[selected],
     });
